@@ -1,8 +1,23 @@
 var util = require('util');
+const axios = require('axios')
+const CFG_URL = "http://34.92.172.241:6700";
 
 
+//example
+//'{"source":["奋斗","复旦","饭店"],
+// "trans_type":"zh2en",
+// "request_id":"web-translate",
+// "page_id":144200,
+// "replaced":true,
+// "cached":true}'
 var buildRequest = function (texts) {
-    var json_data = {};
+    var json_data = JSON.stringify({
+        source: texts,
+        trans_type: "en2zh",
+        page_id: 144200,
+        replaced: true,
+        cached: true
+    })
     return json_data;
 }
 
@@ -12,8 +27,7 @@ var parseRespones = function (json_data) {
 }
 
 var requestMyTencent = function (data) {
-    var respones = {};
-    return respones;
+    return axios.post(CFG_URL, data);
 }
 
 var tencentTransZh = function (texts) {
@@ -97,5 +111,11 @@ var main = function () {
     //完成，MD，记一次肚子疼写代码的经历
 }
 
+var test = function () {
+    let zh_arr = translate(["fdsfds","song","jfoskdj jsdjf a s8 sfs"]);
+}
+
 //入口
-main();
+//main();
+
+test();

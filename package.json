@@ -1,0 +1,11 @@
+{
+  "name": "AnnotationTranslate",
+  "version": "1.0.0",
+  "dependencies": {
+    "process": "^0.11.10"
+  },
+  "devDependencies": {
+    "axios": "^0.22.0",
+    "request": "^2.88.2"
+  }
+}
