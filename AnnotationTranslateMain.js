@@ -1,6 +1,6 @@
 var util = require('util');
 const axios = require('axios')
-const CFG_URL = "http://34.92.172.241:6700";
+const CFG_URL = "http://trans.api.martinsong.org";
 
 
 //example
@@ -12,6 +12,7 @@ const CFG_URL = "http://34.92.172.241:6700";
 // "cached":true}'
 var buildRequest = function (texts) {
     var json_data = JSON.stringify({
+        url:"",
         source: texts,
         trans_type: "en2zh",
         page_id: 144200,
@@ -21,20 +22,23 @@ var buildRequest = function (texts) {
     return json_data;
 }
 
-var parseRespones = function (json_data) {
-    var zh_data = [];
+var parseRespones = function (res) {
+    var zh_data = res.data.target;
     return zh_data;
 }
 
-var requestMyTencent = function (data) {
-    return axios.post(CFG_URL, data);
+requestMyTencent = async function(data) {
+    var ret = axios.post(CFG_URL, data);
+    return ret;
 }
 
 var tencentTransZh = function (texts) {
     var json_data = buildRequest(texts);
-    var respones_data = requestMyTencent(json_data);
-    var zh_data = parseRespones(respones_data);
-    return zh_data;
+    var respones_data =  requestMyTencent(json_data);
+    respones_data.then(function (res) {
+        var zh_data = parseRespones(res);
+        console.log(zh_data);
+    })
 }
 
 
