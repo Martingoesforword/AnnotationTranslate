@@ -5,8 +5,8 @@ const path=require('path');
 
 
 
-// const CFG_URL = "http://trans.api.martinsong.org";
-const CFG_URL = "http://127.0.0.1:9991";
+const CFG_URL = "http://trans.api.martinsong.org";
+//const CFG_URL = "http://127.0.0.1:9991";
 
 
 //example
