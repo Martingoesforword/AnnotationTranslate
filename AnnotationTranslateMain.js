@@ -1,6 +1,7 @@
 var util = require('util');
-const axios = require('axios')
-const CFG_URL = "http://trans.api.martinsong.org";
+const request = require('request')
+// const CFG_URL = "http://trans.api.martinsong.org";
+const CFG_URL = "http://127.0.0.1:";
 
 
 //example
@@ -11,14 +12,15 @@ const CFG_URL = "http://trans.api.martinsong.org";
 // "replaced":true,
 // "cached":true}'
 var buildRequest = function (texts) {
-    var json_data = JSON.stringify({
-        url:"",
-        source: texts,
-        trans_type: "en2zh",
-        page_id: 144200,
-        replaced: true,
-        cached: true
-    })
+    var json_data = {
+        "url": "",
+        "source": texts,
+        "trans_type": "en2zh",
+        "page_id": 144200,
+        "replaced": true,
+        "cached": true,
+        "request_id": 90900
+    };
     return json_data;
 }
 
@@ -27,8 +29,28 @@ var parseRespones = function (res) {
     return zh_data;
 }
 
+var asyncRequest = async function(url, data) {
+    var requestBody = {
+        "url": url,
+        "method": "POST",
+        "headers": {
+            "content-type": "application/json",
+            "X-Authorization": "token faker"
+        },
+        "timeout":10000,
+        "data": JSON.stringify(data)
+    };
+    return new Promise((resolve, reject) => request.post(requestBody, (err, response, body) => {
+        if (err) {
+            reject(err);
+        } else {
+            resolve(body);
+        }
+    }));
+}
+
 requestMyTencent = async function(data) {
-    var ret = axios.post(CFG_URL, data);
+    var ret = await asyncRequest(CFG_URL, data);
     return ret;
 }
 
