@@ -1,7 +1,7 @@
 var util = require('util');
 const request = require('request')
 // const CFG_URL = "http://trans.api.martinsong.org";
-const CFG_URL = "http://127.0.0.1:";
+const CFG_URL = "http://trans.api.martinsong.org";
 
 
 //example
@@ -30,15 +30,16 @@ var parseRespones = function (res) {
 }
 
 var asyncRequest = async function(url, data) {
+    var json = JSON.stringify(data);
     var requestBody = {
         "url": url,
         "method": "POST",
+        "json": true,
         "headers": {
-            "content-type": "application/json",
-            "X-Authorization": "token faker"
+            "Content-length": 169,
+            "Content-type": "application/json",
         },
-        "timeout":10000,
-        "data": JSON.stringify(data)
+        "data": json
     };
     return new Promise((resolve, reject) => request.post(requestBody, (err, response, body) => {
         if (err) {
