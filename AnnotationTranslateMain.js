@@ -98,9 +98,15 @@ var dealWithFile = async function(filePath) {
     content = content.replace("MfNlHt35wvkv43hhe-d", "%d");
     content = content.replace("MfNlHt35wvkv43hhe-f", "%f");
 
-    console.log(content);
+    console.log(filePath);
     //写入文件
 
+    fs.writeFile(filePath, content, err => {
+        if (err) {
+            console.error(err)
+        }
+        //文件写入成功。
+    })
 }
 
 //遍历目录下的所有文件
@@ -108,7 +114,8 @@ let matchSuffixes = {
     ".c":1,
     ".cpp":1,
     ".h":1,
-    ".hpp":1
+    ".js":1,
+    ".ts":1,
 }
 
 var forEachFiles = async function (dir){
@@ -124,7 +131,7 @@ var forEachFiles = async function (dir){
 }
 
 var main = async function () {
-    let rootPath = "D:\\workplace\\cpp\\RuiKeStd_Soui2.x-master\\RuiKeStd";
+    let rootPath = "D:\\workplace\\ts_js\\angular_js\\scrum_valutate_time\\frontend";
     await forEachFiles(rootPath);
     //完成，MD，记一次肚子疼写代码的经历
 }
