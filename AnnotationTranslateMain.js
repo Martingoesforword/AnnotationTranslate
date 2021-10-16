@@ -116,6 +116,7 @@ let matchSuffixes = {
     ".h":1,
     ".js":1,
     ".ts":1,
+    ".java":1,
 }
 
 var forEachFiles = async function (dir){
