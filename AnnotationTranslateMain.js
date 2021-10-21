@@ -5,8 +5,8 @@ const path=require('path');
 
 
 
-const CFG_URL = "http://trans.api.martinsong.org";
-//const CFG_URL = "http://127.0.0.1:9991";
+//const CFG_URL = "http://trans.api.martinsong.org";
+const CFG_URL = "http://127.0.0.1:9992";
 
 
 //example
@@ -22,7 +22,7 @@ var buildRequest = function (texts) {
     var json_data = {
         url:"",
         source: texts,
-        fromlang: "en",
+        fromlang: "jp",
         trans_type: "en2zh",
         page_id: 144200,
         replaced: true,
@@ -94,9 +94,9 @@ var dealWithFile = async function(filePath) {
     content = util.format(content, ...zh_arr);
 
     //恢复已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f
-    content = content.replace("MfNlHt35wvkv43hhe-s", "%s");
-    content = content.replace("MfNlHt35wvkv43hhe-d", "%d");
-    content = content.replace("MfNlHt35wvkv43hhe-f", "%f");
+    content = content.replace(/MfNlHt35wvkv43hhe-s/g, "%s");
+    content = content.replace(/MfNlHt35wvkv43hhe-d/g, "%d");
+    content = content.replace(/MfNlHt35wvkv43hhe-f/g, "%f");
 
     console.log(filePath);
     //写入文件
@@ -125,14 +125,14 @@ var forEachFiles = async function (dir){
         var pathname=path.join(dir,file);
         if(fs.statSync(pathname).isDirectory()){
             await forEachFiles(pathname);
-        }else if(matchSuffixes[path.extname(pathname)]){
+        }else if(matchSuffixes[path.extname(pathname)] && pathname.indexOf("z_tools") == -1){
             await dealWithFile(pathname);
         }
     }
 }
 
 var main = async function () {
-    let rootPath = "D:\\workplace\\ts_js\\angular_js\\scrum_valutate_time\\frontend";
+    let rootPath = "D:\\workplace\\cpp\\SSS_operating_system\\30days_REF\\projects\\07_day\\harib04g";
     await forEachFiles(rootPath);
     //完成，MD，记一次肚子疼写代码的经历
 }
