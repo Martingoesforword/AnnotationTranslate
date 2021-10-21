@@ -58,8 +58,7 @@ var translateTenApi = async function(texts) {
 var dealWithFile = async function(filePath) {
     var fileContent = fs.readFileSync(filePath).toString();
     //找到所有的注释行和注释块
-    const regexp = RegExp("/\\*(([\\s\\S\\n])*?)\\*/|//(.*)",'g');
-    let results = fileContent.matchAll(regexp);
+    let results = fileContent.matchAll(/\/\*(([\s\S\n])*?)\*\/|\/(.*)/g);
     let texts = Array.from(results, m => m[1] || m[3]);
 
     if(!texts.length) return;
