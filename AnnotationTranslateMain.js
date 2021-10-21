@@ -22,7 +22,7 @@ var buildRequest = function (texts) {
     var json_data = {
         url:"",
         source: texts,
-        fromlang: "jp",
+        fromlang: "en",
         trans_type: "en2zh",
         page_id: 144200,
         replaced: true,
@@ -44,8 +44,9 @@ var translateTenApi = async function(texts) {
     let response = await axios({
         url: CFG_URL,
         method: "POST",
+        timeout: 5000,
         headers: { "Content-Type": "application/json" },
-        data:  JSON.stringify(data)
+        data:  JSON.stringify(data),
     })
     var zh_data = parseReceiveInfo(response);
     return zh_data;
@@ -68,7 +69,23 @@ var dealWithFile = async function(filePath) {
     // while (curCount < )
 
     //翻译块
-    let zh_arr = await translateTenApi(texts);
+    let zh_arr;
+    try {
+        zh_arr = await translateTenApi(texts);
+    }
+    catch (e) {
+        try {
+            zh_arr = await translateTenApi(texts);
+        }
+        catch (e) {
+            try {
+                zh_arr = await translateTenApi(texts);
+            }
+            catch (e) {
+                return;
+            }
+        }
+    }
 
     //备份已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f
     const regexp_s = RegExp("%s",'g');
@@ -118,21 +135,37 @@ let matchSuffixes = {
     ".java":1,
 }
 
-var forEachFiles = async function (dir){
+var allFiles = [];
+
+var forEachFiles = function (dir){
     let alldir = fs.readdirSync(dir);
-    for (var file of alldir) {
+    for (var fileIndex in alldir) {
+        let file = alldir[fileIndex];
         var pathname=path.join(dir,file);
         if(fs.statSync(pathname).isDirectory()){
-            await forEachFiles(pathname);
-        }else if(matchSuffixes[path.extname(pathname)] && pathname.indexOf("z_tools") == -1){
-            await dealWithFile(pathname);
+            forEachFiles(pathname);
+        }else if(matchSuffixes[path.extname(pathname)]){
+            allFiles.push(pathname);
         }
     }
 }
 
+var dealForEachFiles = async function (){
+    for (var fileIndex in allFiles) {
+        let pathname = allFiles[fileIndex];
+        if(fileIndex % 20 === 0)
+        {
+            await dealWithFile(pathname);
+        }
+        dealWithFile(pathname);
+    }
+}
+
+
 var main = async function () {
-    let rootPath = "D:\\workplace\\cpp\\SSS_operating_system\\30days_REF\\projects\\07_day\\harib04g";
-    await forEachFiles(rootPath);
+    let rootPath = "D:\\workplace\\cpp\\SSS_operating_system\\30days_REF";
+    forEachFiles(rootPath);
+    await dealForEachFiles();
     //完成，MD，记一次肚子疼写代码的经历
 }
 
