@@ -97,9 +97,9 @@ let matchSuffixes = {
 
 //不同代码族的正则和替换模式map
 let suffix2Regexp = {
-    "cLike": ["/\\*(([\\s\\S\\n])*?)\\*/|//(.*)", m => m[1] || m[3], [["/\\*(([\\s\\S\\n])*?)\\*/","/* %s */"], ["//(.*)", "// %s"]]],
-    "pyLike": ["#(.*)", m => m[1], [["#(.*)", "# %s"]] ],
-    "vbLike": [";(.*)", m => m[1], [[";(.*)", "; %s"]] ]
+    "cLike": ["/\\*(([\\s\\S\\n])*?)\\*/|//(.*)", m => m[1] || m[3], [["([^/])/\\*(([\\s\\S\\n])*?)\\*/","$1 /* %s */ "], ["//(.*)", " // %s "]]],
+    "pyLike": ["#(.*)", m => m[1], [["#(.*)", " # %s "]] ],
+    "vbLike": [";(.*)", m => m[1], [[";(.*)", " ; %s "]] ]
 }
 
 //逻辑：/* //一样高
@@ -147,7 +147,8 @@ var dealWithFile = async function(filePath) {
         }
     }
 
-    zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\*\//g, "* /"));
+    zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\*\//g, " * / "));
+    zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\\\*/g, " \ * "));
 
     //备份已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f
     const regexp_s = RegExp("%s",'g');
@@ -161,7 +162,7 @@ var dealWithFile = async function(filePath) {
     let replaceInfoes = regInfo[2];
     replaceInfoes.forEach(reInfo=>{
         const regexp = RegExp(reInfo[0],'g');
-        content = content.replace(regexp, " "+reInfo[1]+" ");
+        content = content.replace(regexp, reInfo[1]);
     });
     if(texts.length !== zh_arr.length){
         console.log("翻译结果不一致");
@@ -191,6 +192,10 @@ var dealWithFile = async function(filePath) {
 var allFiles = [];
 
 var forEachFiles = function (dir){
+    if(matchSuffixes[path.extname(dir)] && dir.indexOf("node_modules") === -1){
+        allFiles.push(dir);
+        return;
+    }
     let alldir = fs.readdirSync(dir);
     for (var fileIndex in alldir) {
         let file = alldir[fileIndex];
@@ -216,7 +221,7 @@ var dealForEachFiles = async function (){
 
 
 var main = async function () {
-    let rootPath = "D:\\workplace\\cpp\\RuiKeStd_Soui2.x-master\\include\\sdl2";
+    let rootPath = "D:\\workplace\\cpp\\RuiKeStd_Soui2.x-master\\RuiKeStd";
     forEachFiles(rootPath);
     await dealForEachFiles();
     //完成，MD，记一次肚子疼写代码的经历
