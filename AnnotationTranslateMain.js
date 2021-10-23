@@ -97,9 +97,9 @@ let matchSuffixes = {
 
 //不同代码族的正则和替换模式map
 let suffix2Regexp = {
-    "cLike": ["/\\*(([\\s\\S\\n])*?)\\*/|//(.*)", m => m[1] || m[3], [["//(.*)", "//%s"], ["/\\*(([\\s\\S\\n])*?)\\*/","/*%s*/"]]],
-    "pyLike": ["#(.*)", m => m[1], [["#(.*)", "#%s"]] ],
-    "vbLike": [";(.*)", m => m[1], [[";(.*)", ";%s"]] ]
+    "cLike": ["/\\*(([\\s\\S\\n])*?)\\*/|//(.*)", m => m[1] || m[3], [["/\\*(([\\s\\S\\n])*?)\\*/","/* %s */"], ["//(.*)", "// %s"]]],
+    "pyLike": ["#(.*)", m => m[1], [["#(.*)", "# %s"]] ],
+    "vbLike": [";(.*)", m => m[1], [[";(.*)", "; %s"]] ]
 }
 
 //逻辑：/* //一样高
@@ -216,7 +216,7 @@ var dealForEachFiles = async function (){
 
 
 var main = async function () {
-    let rootPath = "D:\\workplace\\cpp\\RuiKeStd_Soui2.x-master\\include";
+    let rootPath = "D:\\workplace\\cpp\\RuiKeStd_Soui2.x-master\\include\\sdl2";
     forEachFiles(rootPath);
     await dealForEachFiles();
     //完成，MD，记一次肚子疼写代码的经历
