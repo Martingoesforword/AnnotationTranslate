@@ -23,6 +23,7 @@ var buildRequest = function (texts) {
         url:"",
         source: texts,
         fromlang: "en",
+        tolang: "zh",
         trans_type: "en2zh",
         page_id: 144200,
         replaced: true,
@@ -80,6 +81,26 @@ var translateTenApi = async function(texts) {
     return allGroups;
 }
 
+//遍历目录下的所有文件
+//可设定忽略扫描，1为忽略
+let matchSuffixes = {
+    ".c":       ["cLike", 0],
+    ".cc":      ["cLike", 0],
+    ".cpp":     ["cLike", 0],
+    ".h":       ["cLike", 0],
+    ".js":      ["cLike", 0],
+    ".ts":      ["cLike", 0],
+    ".java":    ["cLike", 0],
+    ".py":      ["pyLike", 0],
+    ".nas":     ["pyLike", 0],
+}
+
+//不同代码族的正则和替换模式map
+let suffix2Regexp = {
+    "cLike": ["/\\*(([\\s\\S\\n])*?)\\*/|//(.*)", m => m[1] || m[3], [["//(.*)", "//%s"], ["/\\*(([\\s\\S\\n])*?)\\*/","/*%s*/"]]],
+    "pyLike": [";(.*)", m => m[1], [[";(.*)", ";%s"]] ]
+}
+
 //逻辑：/* //一样高
 //    /\*([\n.]*)\*/
 //    //.*\n
@@ -87,9 +108,18 @@ var translateTenApi = async function(texts) {
 var dealWithFile = async function(filePath) {
     var fileContent = fs.readFileSync(filePath).toString();
     //找到所有的注释行和注释块
-    const regexp = RegExp("/\\*(([\\s\\S\\n])*?)\\*/|//(.*)",'g');
-    let results = fileContent.matchAll(regexp);
-    let texts = Array.from(results, m => m[1] || m[3]);
+    let results;
+    let texts;
+    let ext = path.extname(filePath);
+    if(!matchSuffixes[ext] || matchSuffixes[ext][1])
+    {
+        return;
+    }
+    let regKey = matchSuffixes[ext][0];
+    let regInfo = suffix2Regexp[regKey];
+    const regexp = RegExp(regInfo[0],'g');
+    results = fileContent.matchAll(regexp);
+    texts = Array.from(results, regInfo[1]);
 
     if(!texts.length) return;
 
@@ -116,6 +146,8 @@ var dealWithFile = async function(filePath) {
         }
     }
 
+    zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\*\//g, "* /"));
+
     //备份已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f
     const regexp_s = RegExp("%s",'g');
     const regexp_d = RegExp("%d",'g');
@@ -125,14 +157,14 @@ var dealWithFile = async function(filePath) {
     content = content.replace(regexp_f, "MfNlHt35wvkv43hhe-f");
 
     //替换%s
-    const regexp2 = RegExp("//(.*)",'g');
-    content = content.replace(regexp2, "//%s");
-    const regexp1 = RegExp("/\\*(([\\s\\S\\n])*?)\\*/",'g');
-    content = content.replace(regexp1, "/*%s*/");
+    let replaceInfoes = regInfo[2];
+    replaceInfoes.forEach(reInfo=>{
+        const regexp = RegExp(reInfo[0],'g');
+        content = content.replace(regexp, " "+reInfo[1]+" ");
+    });
     if(texts.length !== zh_arr.length){
         console.log("翻译结果不一致");
     }
-
 
 
     //填充翻译结果
@@ -154,16 +186,6 @@ var dealWithFile = async function(filePath) {
     })
 }
 
-//遍历目录下的所有文件
-let matchSuffixes = {
-    ".c":1,
-    ".cc":1,
-    ".cpp":1,
-    ".h":1,
-    ".js":1,
-    ".ts":1,
-    ".java":1,
-}
 
 var allFiles = [];
 
@@ -193,7 +215,7 @@ var dealForEachFiles = async function (){
 
 
 var main = async function () {
-    let rootPath = "D:\\workplace\\cpp\\electron\\electron";
+    let rootPath = "D:\\workplace\\cpp\\RuiKeStd_Soui2.x-master\\include";
     forEachFiles(rootPath);
     await dealForEachFiles();
     //完成，MD，记一次肚子疼写代码的经历
