@@ -231,7 +231,7 @@ var test = function () {
     let zh_arr = translate(["fdsfds","song","jfoskdj jsdjf a s8 sfs"]);
 }
 
-//入口
+//入口 
 main();
 
 //test();
