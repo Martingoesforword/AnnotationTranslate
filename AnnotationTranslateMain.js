@@ -3,10 +3,11 @@ const axios = require('axios')
 const fs = require('fs');
 const path=require('path');
 
+const DEAL_ED_FLAG = "JKFSDJFKDSJKFJKJk_HAS_TRANSLATION"
 
 
 const CFG_URL = "http://trans.api.martinsong.org";
-//const CFG_URL = "http://127.0.0.1:9992";
+//const CFG_URL = "http://127.0.0.1:9991";
 
 
 //example
@@ -39,6 +40,10 @@ var parseReceiveInfo = function (res) {
     return zh_data;
 }
 
+var translatePrefile = {
+    up5000Time: 0,
+    otherTime: 0,
+}
 //翻译过程
 var translateTenApi = async function(texts) {
     let allGroups = [];
@@ -51,6 +56,7 @@ var translateTenApi = async function(texts) {
         curCharCount += curText.length;
         if(curCharCount > 5000)
         {
+            translatePrefile.up5000Time++;
             var data = buildRequest(curGroup);
             curCharCount = 0;
             curGroup = [];
@@ -66,6 +72,8 @@ var translateTenApi = async function(texts) {
         }
         curGroup.push(curText);
     }
+    // 之前逻辑是 一个文件翻译内容没有超过5000，才开始翻译，但是很多文件加起来不够5000，导致这里很慢
+    translatePrefile.otherTime++;
     if(curGroup.length) {
         data = buildRequest(curGroup);
         let response = await axios({
@@ -78,6 +86,7 @@ var translateTenApi = async function(texts) {
         zh_data = parseReceiveInfo(response);
         allGroups = allGroups.concat(zh_data);
     }
+    console.log(JSON.stringify(translatePrefile));
     return allGroups;
 }
 
@@ -114,7 +123,10 @@ var dealWithFile = async function(filePath) {
     let ext = path.extname(filePath);
     if(!matchSuffixes[ext] || matchSuffixes[ext][1])
     {
-        return;
+        return null;
+    }
+    if(fileContent.match(DEAL_ED_FLAG)) {
+        return null;
     }
     let regKey = matchSuffixes[ext][0];
     let regInfo = suffix2Regexp[regKey];
@@ -122,7 +134,7 @@ var dealWithFile = async function(filePath) {
     results = fileContent.matchAll(regexp);
     texts = Array.from(results, regInfo[1]);
 
-    if(!texts.length) return;
+    if(!texts.length) return null;
 
     // let curCount = 0;
     // let curArr = [];
@@ -142,7 +154,7 @@ var dealWithFile = async function(filePath) {
                 zh_arr = await translateTenApi(texts);
             }
             catch (e) {
-                return;
+                return null;
             }
         }
     }
@@ -176,16 +188,18 @@ var dealWithFile = async function(filePath) {
     content = content.replace(/MfNlHt35wvkv43hhe-s/g, "%s");
     content = content.replace(/MfNlHt35wvkv43hhe-d/g, "%d");
     content = content.replace(/MfNlHt35wvkv43hhe-f/g, "%f");
-
+    var hadTranslations = "// "+DEAL_ED_FLAG+" \n";
     console.log(filePath);
     //写入文件
 
+    content = hadTranslations + content;
     fs.writeFile(filePath, content, err => {
         if (err) {
             console.error(err)
         }
         //文件写入成功。
     })
+    return null;
 }
 
 
@@ -208,6 +222,10 @@ var forEachFiles = function (dir){
     }
 }
 
+var waitFileInfo = {
+    mmap: {},
+    textNumber: 0,
+};
 var dealForEachFiles = async function (){
     for (var fileIndex in allFiles) {
         let pathname = allFiles[fileIndex];
@@ -216,12 +234,20 @@ var dealForEachFiles = async function (){
             await dealWithFile(pathname);
         }
         dealWithFile(pathname);
+        // var dealRet = await dealWithFile(pathname);
+        // 少于50000字，则不处理，累计处理所有文件
+        // if(dealRet.lessContent) {
+        //     // 将文件内容放到map中，等待处理
+        //     waitFileMap.mmap[pathname] = dealRet.content;
+        //     waitFileInfo.textNumber += dealRet.content.length;
+        //     var dealRet = await dealWithFile(pathname);
+        // }
     }
 }
 
 
 var main = async function () {
-    let rootPath = "D:\\workplace\\cpp\\RuiKeStd_Soui2.x-master\\RuiKeStd";
+    let rootPath = "D:\\workplace\\cpp\\WinNT5_src_20201004\\NT";
     forEachFiles(rootPath);
     await dealForEachFiles();
     //完成，MD，记一次肚子疼写代码的经历
