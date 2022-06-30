@@ -48,7 +48,7 @@ var translateTenApi = async function(texts) {
     let curCharCount = 0;
     for(var i=0,len=texts.length; i<len; i+=1){
         let curText = texts[i];
-        curCharCount += texts.length;
+        curCharCount += curText.length;
         if(curCharCount > 5000)
         {
             var data = buildRequest(curGroup);
