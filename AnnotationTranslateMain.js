@@ -106,9 +106,10 @@ let matchSuffixes = {
 
 //不同代码族的正则和替换模式map
 let suffix2Regexp = {
-    "cLike": ["/\\*(([\\s\\S\\n])*?)\\*/|//(.*)", m => m[1] || m[3], [["([^/]|^)/\\*(([\\s\\S\\n])*?)\\*/","$1 /* %s */ "], ["//(.*)", " // %s "]]],
-    "pyLike": ["#(.*)", m => m[1], [["#(.*)", " # %s "]] ],
-    "vbLike": [";(.*)", m => m[1], [[";(.*)", " ; %s "]] ]
+    "cLike": [/\/\*(([\s\S\n])*?)\*\/|\/\/(.*)/g, m => m[1] || m[3], [[/([^\/]|^)\/\*(([\s\S\n])*?)\*\//g,"$1/*%s*/ "], [/\/\/(.*)/g, "//%s"]]
+        ,[[/\r\*/g, "\r * "], [/\r  \*/g, "\r * "], [/\*  。/g,"*"]]],
+    "pyLike": [/#(.*)/g, m => m[1], [[/#(.*)/g, "# %s "]],[] ],
+    "vbLike": [/;(.*)/g, m => m[1], [[/;(.*)/g, "; %s "]],[] ]
 }
 
 //逻辑：/* //一样高
@@ -130,8 +131,7 @@ var dealWithFile = async function(filePath) {
     }
     let regKey = matchSuffixes[ext][0];
     let regInfo = suffix2Regexp[regKey];
-    const regexp = RegExp(regInfo[0],'g');
-    results = fileContent.matchAll(regexp);
+    results = fileContent.matchAll(regInfo[0]);
     texts = Array.from(results, regInfo[1]);
 
     if(!texts.length) return null;
@@ -173,13 +173,20 @@ var dealWithFile = async function(filePath) {
     //替换%s
     let replaceInfoes = regInfo[2];
     replaceInfoes.forEach(reInfo=>{
-        const regexp = RegExp(reInfo[0],'g');
-        content = content.replace(regexp, reInfo[1]);
+        content = content.replace(reInfo[0], reInfo[1]);
     });
     if(texts.length !== zh_arr.length){
         console.log("翻译结果不一致");
     }
 
+    let beautyInfoes = regInfo[3];
+    if(beautyInfoes) {
+        zh_arr.forEach((zh,i)=>{
+            beautyInfoes.forEach(info=>{
+                zh_arr[i] = zh_arr[i].replace(info[0], info[1]);
+            })
+        })
+    }
 
     //填充翻译结果
     content = util.format(content, ...zh_arr);
@@ -247,7 +254,7 @@ var dealForEachFiles = async function (){
 
 
 var main = async function () {
-    let rootPath = "D:\\workplace\\cpp\\WinNT5_src_20201004\\NT";
+    let rootPath = "D:\\workplace\\cpp\\WinNT5_src_20201004\\NT\\admin\\activec\\base";
     forEachFiles(rootPath);
     await dealForEachFiles();
     //完成，MD，记一次肚子疼写代码的经历
