@@ -214,6 +214,7 @@ var allFiles = [];
 
 var forEachFiles = function (dir){
     if(matchSuffixes[path.extname(dir)] && dir.indexOf("node_modules") === -1){
+        console.log("add "+ dir);
         allFiles.push(dir);
         return;
     }
@@ -224,6 +225,7 @@ var forEachFiles = function (dir){
         if(fs.statSync(pathname).isDirectory()){
             forEachFiles(pathname);
         }else if(matchSuffixes[path.extname(pathname)] && pathname.indexOf("node_modules") === -1){
+            console.log("add "+ dir);
             allFiles.push(pathname);
         }
     }
