@@ -6,7 +6,7 @@ const path=require('path');
 const DEAL_ED_FLAG = "JKFSDJFKDSJKFJKJk_HAS_TRANSLATION"
 
 
-const CFG_URL = "http://trans.api.martinsong.org";
+const CFG_URL = "http://trans1.api.martinsong.org";
 //const CFG_URL = "http://127.0.0.1:9991";
 
 
@@ -214,7 +214,6 @@ var allFiles = [];
 
 var forEachFiles = function (dir){
     if(matchSuffixes[path.extname(dir)] && dir.indexOf("node_modules") === -1){
-        console.log("add "+ dir);
         allFiles.push(dir);
         return;
     }
@@ -225,7 +224,7 @@ var forEachFiles = function (dir){
         if(fs.statSync(pathname).isDirectory()){
             forEachFiles(pathname);
         }else if(matchSuffixes[path.extname(pathname)] && pathname.indexOf("node_modules") === -1){
-            console.log("add "+ dir);
+            console.log("add "+ pathname);
             allFiles.push(pathname);
         }
     }
@@ -238,7 +237,7 @@ var waitFileInfo = {
 var dealForEachFiles = async function (){
     for (var fileIndex in allFiles) {
         let pathname = allFiles[fileIndex];
-        if(fileIndex % 20 === 0)
+        if(fileIndex % 30 === 0)
         {
             await dealWithFile(pathname);
         }
@@ -256,7 +255,8 @@ var dealForEachFiles = async function (){
 
 
 var main = async function () {
-    let rootPath = "D:\\workplace\\cpp\\WinNT5_src_20201004\\NT\\admin\\activec\\base";
+    allFiles = [];
+    let rootPath = "d:/workplace/cc/baby-git";
     forEachFiles(rootPath);
     await dealForEachFiles();
     //完成，MD，记一次肚子疼写代码的经历
