@@ -1,100 +1,20 @@
 var util = require('util');
 const axios = require('axios')
 const fs = require('fs');
-const path=require('path');
+const path= require('path');
 
-const DEAL_ED_FLAG = "JKFSDJFKDSJKFJKJk_HAS_TRANSLATION"
-
-
+// 翻译接口地址
 const CFG_URL = "http://trans1.api.martinsong.org";
-//const CFG_URL = "http://127.0.0.1:9991";
-
-const preReplacePrefix = "MfNlHt35wvkv43hhe";
-const preReplaceMatchList = ["d","f","s","o"];
-
-
-//example
-//'{"source":["奋斗","复旦","饭店"],
-// "trans_type":"zh2en",
-// "request_id":"web-translate",
-// "page_id":144200,
-// "replaced":true,
-// "cached":true}'
-
-// 构建请求body数据对象
-var buildRequest = function (texts) {
-    var json_data = {
-        url:"",
-        source: texts,
-        fromlang: "en",
-        tolang: "zh",
-        trans_type: "en2zh",
-        page_id: 144200,
-        replaced: true,
-        cached: true
-    };
-    return json_data;
+// const CFG_URL = "http://127.0.0.1:9991";
+// 跳过文件或目录列表
+const skipLikeMap = {
+    "node_module": 1,
+    ".git": 1,
+    ".vscode": 1,
+    ".idea": 1,
 }
-
-// 解析翻译api结果数据
-var parseReceiveInfo = function (res) {
-    var zh_data = [];
-    res.data.target.forEach((item)=>zh_data.push(item.target.slice(24)));
-    return zh_data;
-}
-
-var translatePrefile = {
-    up5000Time: 0,
-    otherTime: 0,
-}
-//翻译过程
-var translateTenApi = async function(texts) {
-    let allGroups = [];
-
-    let curGroup = [];
-
-    let curCharCount = 0;
-    for(var i=0,len=texts.length; i<len; i+=1){
-        let curText = texts[i];
-        curCharCount += curText.length;
-        curGroup.push(curText);
-        if(curCharCount > 5000)
-        {
-            translatePrefile.up5000Time++;
-            var data = buildRequest(curGroup);
-            curCharCount = 0;
-            curGroup = [];
-            let response = await axios({
-                url: CFG_URL,
-                method: "POST",
-                timeout: 5000,
-                headers: { "Content-Type": "application/json" },
-                data:  JSON.stringify(data),
-            })
-            var zh_data = parseReceiveInfo(response);
-            allGroups = allGroups.concat(zh_data);
-        }
-    }
-    // 之前逻辑是 一个文件翻译内容没有超过5000，才开始翻译，但是很多文件加起来不够5000，导致这里很慢
-    translatePrefile.otherTime++;
-    if(curGroup.length) {
-        data = buildRequest(curGroup);
-        let response = await axios({
-            url: CFG_URL,
-            method: "POST",
-            timeout: 5000,
-            headers: { "Content-Type": "application/json" },
-            data:  JSON.stringify(data),
-        })
-        zh_data = parseReceiveInfo(response);
-        allGroups = allGroups.concat(zh_data);
-    }
-    console.log(JSON.stringify(translatePrefile));
-    return allGroups;
-}
-
-//遍历目录下的所有文件
-//可设定忽略扫描，1为忽略
+// 遍历目录下的所有文件
+// 可设定忽略扫描，1为忽略
 let matchSuffixes = {
     ".c":       ["cLike", 0],
     ".cc":      ["cLike", 0],
@@ -106,24 +26,99 @@ let matchSuffixes = {
     ".py":      ["pyLike", 0],
     ".nas":     ["vbLike", 0],
 }
-
-//不同代码族的正则和替换模式map
+// 不同代码族的正则和替换模式map
 let suffix2Regexp = {
     "cLike": [/\/\*(([\s\S\n])*?)\*\/|\/\/(.*)/g, m => m[1] || m[3], [[/([^\/]|^)\/\*(([\s\S\n])*?)\*\//g,"$1/*%s*/ "], [/\/\/(.*)/g, "//%s"]]
         ,[[/\r\*/g, "\r * "], [/\r  \*/g, "\r * "], [/\*  。/g,"*"]]],
     "pyLike": [/#(.*)/g, m => m[1], [[/#(.*)/g, "# %s "]],[] ],
     "vbLike": [/;(.*)/g, m => m[1], [[/;(.*)/g, "; %s "]],[] ]
 }
+// 较固定配置
+var preReplacePrefix = "ANNOTATION_TRANSLATE";
+preReplacePrefix += "_TAG";
+const preReplaceMatchList = ["d","f","s","o"];
+const DEAL_ED_FLAG = "THIS_SOURCES_HAS_BEEN_TRANSLATED"
 
-//逻辑：/* //一样高
-//    /\*([\n.]*)\*/
-//    //.*\n
-//   /\*(.*)\*/|//(.*)\n
-var dealWithFile = async function(filePath) {
+/**
+ * 请求翻译接口
+ * @param curGroup
+ * @returns {Promise<*[]>}
+ */
+var fireTranslate = async function(curGroup) {
+    var json_data = {
+        url:"",
+        source: curGroup,
+        fromlang: "en",
+        tolang: "zh",
+        trans_type: "en2zh",
+        page_id: 144200,
+        replaced: true,
+        cached: true
+    };
+    let response = await axios({
+        url: CFG_URL,
+        method: "POST",
+        timeout: 5000,
+        headers: { "Content-Type": "application/json" },
+        data:  JSON.stringify(json_data),
+    });
+    var zh_data = [];
+    response.data.target.forEach(item=>{
+        let one = item.target.slice(24);
+        zh_data.push(one);
+    });
+    return zh_data;
+}
+
+/**
+ * 建立单次翻译列表
+ * @param texts
+ * @param profile
+ * @returns {Promise<*[]>}
+ */
+var translateTenApi = async function(texts, profile) {
+    let allGroups = [];
+    let curGroup = [];
+    let curCharCount = 0;
+
+    for (const curText of texts) {
+        curCharCount += curText.length;
+        curGroup.push(curText);
+        if(curCharCount > 5000)
+        {
+            let zh_data = await fireTranslate(curGroup);
+            allGroups = allGroups.concat(zh_data);
+
+            // 清空5000计数
+            curCharCount = 0;
+            curGroup = [];
+
+            // 运行记录
+            profile.up5000Time++;
+        }
+    }
+    // 之前逻辑是 一个文件翻译内容没有超过5000，才开始翻译，但是很多文件加起来不够5000，导致这里很慢
+    if(curGroup.length) {
+        let zh_data = await fireTranslate(curGroup);
+        allGroups = allGroups.concat(zh_data);
+
+        profile.otherTime++;
+    }
+    return allGroups;
+}
+
+/**
+ * 处理一个文件
+ * @param filePath
+ * @param profile
+ * @returns {Promise<null>}
+ */
+var dealWithFile = async function(filePath, profile) {
     var fileContent = fs.readFileSync(filePath).toString();
-    //找到所有的注释行和注释块
+    // 找到所有的注释行和注释块
     let results;
     let texts;
+
     let ext = path.extname(filePath);
     if(!matchSuffixes[ext] || matchSuffixes[ext][1])
     {
@@ -139,142 +134,143 @@ var dealWithFile = async function(filePath) {
 
     if(!texts.length) return null;
 
-    // let curCount = 0;
-    // let curArr = [];
-    // while (curCount < )
 
-    //翻译块
+    // 尝试翻译3次，失败直接返回
+    let tryTimes = 3;
     let zh_arr;
-    try {
-        zh_arr = await translateTenApi(texts);
-    }
-    catch (e) {
+    while (tryTimes--) {
         try {
-            zh_arr = await translateTenApi(texts);
+            zh_arr = await translateTenApi(texts, profile);
+            break;
         }
         catch (e) {
-            try {
-                zh_arr = await translateTenApi(texts);
-            }
-            catch (e) {
+            if(!tryTimes) {
                 return null;
             }
         }
+    }
+    if(texts.length !== zh_arr.length){
+        console.warn("翻译结果不一致");
     }
 
     zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\*\//g, " * / "));
     zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\\\*/g, " \ * "));
 
-    //备份已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f, MfNlHt35wvkv43hhe-o
+    // 备份已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f, MfNlHt35wvkv43hhe-o
     var content = fileContent;
     preReplaceMatchList.forEach(match=>{
         const regexp = RegExp("%"+match,'g');
         content = content.replace(regexp, preReplacePrefix+"-"+match);
     })
 
-    //替换%s
-    let replaceInfoes = regInfo[2];
-    replaceInfoes.forEach(reInfo=>{
+    // 替换%s
+    let replaceInfos = regInfo[2];
+    replaceInfos.forEach(reInfo=>{
         content = content.replace(reInfo[0], reInfo[1]);
     });
-    if(texts.length !== zh_arr.length){
-        console.log("翻译结果不一致");
-    }
 
-    let beautyInfoes = regInfo[3];
-    if(beautyInfoes) {
+    // 美化翻译结果
+    let beautyInfos = regInfo[3];
+    if(beautyInfos) {
         zh_arr.forEach((zh,i)=>{
-            beautyInfoes.forEach(info=>{
+            beautyInfos.forEach(info=>{
                 zh_arr[i] = zh_arr[i].replace(info[0], info[1]);
             })
         })
     }
 
-    //填充翻译结果
+    // 填充翻译结果
     content = util.format(content, ...zh_arr);
 
-    //恢复已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f
-
+    // 恢复已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f
     preReplaceMatchList.forEach(match=>{
         const regexp = RegExp(preReplacePrefix+"-"+match,'g');
         content = content.replace(regexp, "%"+match);
     });
-    var hadTranslations = "// "+DEAL_ED_FLAG+" \n";
-    console.log(filePath);
-    //写入文件
 
+    var hadTranslations = "// "+DEAL_ED_FLAG+" \n";
+
+    // 写入文件
     content = hadTranslations + content;
     fs.writeFile(filePath, content, err => {
         if (err) {
             console.error(err)
         }
-        //文件写入成功。
-    })
+        // 文件写入成功。
+    });
+
+    console.log(filePath);
     return null;
 }
 
-
-var allFiles = [];
-
-var forEachFiles = function (dir, oneFile){
-    if(matchSuffixes[path.extname(dir)] && dir.indexOf("node_modules") === -1){
-        allFiles.push(dir);
+/**
+ * 遍历路径，构建待处理文件列表
+ * @param allFiles
+ * @param dirPath
+ * @param oneFile
+ */
+var forEachFiles = function (allFiles, dirPath, oneFile){
+    // 跳过文件 或者目录
+    var dirName = path.basename(dirPath);
+    if(skipLikeMap[dirName.toString()]) {
         return;
     }
-    let alldir = fs.readdirSync(dir);
-    for (var fileIndex in alldir) {
-        let file = alldir[fileIndex];
-        var pathname=path.join(dir,file);
-        if(oneFile) {
-            if( pathname.indexOf(oneFile)>0) {
-                allFiles.push(pathname);
+    var stat = fs.lstatSync(dirPath);
+
+    if(stat.isFile(dirPath)){
+        if(matchSuffixes[path.extname(dirPath)]) {
+            if(oneFile) {
+                if(dirPath.indexOf(oneFile) !== -1) {
+                    allFiles.push(dirPath);
+                }
+            }
+            else {
+                allFiles.push(dirPath);
             }
         }
-        else {
-            if(fs.statSync(pathname).isDirectory()){
-                forEachFiles(pathname);
-            }else if(matchSuffixes[path.extname(pathname)] && pathname.indexOf("node_modules") === -1){
-                console.log("add "+ pathname);
-                allFiles.push(pathname);
-            }
-        }
+    }
+    else {
+        let subDirArr = fs.readdirSync(dirPath);
+        subDirArr.forEach(subDir=>{
+            var subDirPath = path.join(dirPath,subDir);
+            forEachFiles(allFiles, subDirPath, oneFile);
+        })
     }
 }
 
-var waitFileInfo = {
-    mmap: {},
-    textNumber: 0,
-};
-var dealForEachFiles = async function (){
-    for (var fileIndex in allFiles) {
-        let pathname = allFiles[fileIndex];
-        if(fileIndex % 30 === 0)
+/**
+ * 多线程实现
+ * @param allFiles
+ * @param profile
+ * @returns {Promise<void>}
+ */
+var dealForEachFiles = async function (allFiles, profile){
+    let number = 0;
+    for (const pathname of allFiles) {
+        if(++number > 20)
         {
-            await dealWithFile(pathname);
+            await dealWithFile(pathname, profile);
+            number = 0;
         }
-        dealWithFile(pathname);
-        // var dealRet = await dealWithFile(pathname);
-        // 少于50000字，则不处理，累计处理所有文件
-        // if(dealRet.lessContent) {
-        //     // 将文件内容放到map中，等待处理
-        //     waitFileMap.mmap[pathname] = dealRet.content;
-        //     waitFileInfo.textNumber += dealRet.content.length;
-        //     var dealRet = await dealWithFile(pathname);
-        // }
+        dealWithFile(pathname, profile);
     }
 }
 
 
 var main = async function () {
-    allFiles = [];
-    let rootPath = "d:/workplace/cc/baby-git/";
-    forEachFiles(rootPath, "init");
-    await dealForEachFiles();
-    //完成，MD，记一次肚子疼写代码的经历
-}
+    var translateProfile = {
+        up5000Time: 0,
+        otherTime: 0,
+    }
 
-var test = function () {
-    let zh_arr = translate(["fdsfds","song","jfoskdj jsdjf a s8 sfs"]);
+    let rootPath = "d:/workplace/cc/baby-git/";
+
+    var allFiles = [];
+    forEachFiles(allFiles, rootPath);
+    await dealForEachFiles(allFiles, translateProfile);
+
+    console.log(JSON.stringify(translateProfile));
+    //完成，MD，记一次肚子疼写代码的经历
 }
 
 //入口 
