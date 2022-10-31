@@ -9,6 +9,9 @@ const DEAL_ED_FLAG = "JKFSDJFKDSJKFJKJk_HAS_TRANSLATION"
 const CFG_URL = "http://trans1.api.martinsong.org";
 //const CFG_URL = "http://127.0.0.1:9991";
 
+const preReplacePrefix = "MfNlHt35wvkv43hhe";
+const preReplaceMatchList = ["d","f","s","o"];
+
 
 //example
 //'{"source":["奋斗","复旦","饭店"],
@@ -162,13 +165,12 @@ var dealWithFile = async function(filePath) {
     zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\*\//g, " * / "));
     zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\\\*/g, " \ * "));
 
-    //备份已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f
-    const regexp_s = RegExp("%s",'g');
-    const regexp_d = RegExp("%d",'g');
-    const regexp_f = RegExp("%f",'g');
-    let content = fileContent.replace(regexp_s, "MfNlHt35wvkv43hhe-s");
-    content = content.replace(regexp_d, "MfNlHt35wvkv43hhe-d");
-    content = content.replace(regexp_f, "MfNlHt35wvkv43hhe-f");
+    //备份已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f, MfNlHt35wvkv43hhe-o
+    var content = fileContent;
+    preReplaceMatchList.forEach(match=>{
+        const regexp = RegExp("%"+match,'g');
+        content = content.replace(regexp, preReplacePrefix+"-"+match);
+    })
 
     //替换%s
     let replaceInfoes = regInfo[2];
@@ -192,9 +194,11 @@ var dealWithFile = async function(filePath) {
     content = util.format(content, ...zh_arr);
 
     //恢复已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f
-    content = content.replace(/MfNlHt35wvkv43hhe-s/g, "%s");
-    content = content.replace(/MfNlHt35wvkv43hhe-d/g, "%d");
-    content = content.replace(/MfNlHt35wvkv43hhe-f/g, "%f");
+
+    preReplaceMatchList.forEach(match=>{
+        const regexp = RegExp(preReplacePrefix+"-"+match,'g');
+        content = content.replace(regexp, "%"+match);
+    });
     var hadTranslations = "// "+DEAL_ED_FLAG+" \n";
     console.log(filePath);
     //写入文件
