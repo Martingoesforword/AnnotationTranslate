@@ -54,6 +54,7 @@ var translateTenApi = async function(texts) {
     for(var i=0,len=texts.length; i<len; i+=1){
         let curText = texts[i];
         curCharCount += curText.length;
+        curGroup.push(curText);
         if(curCharCount > 5000)
         {
             translatePrefile.up5000Time++;
@@ -70,7 +71,6 @@ var translateTenApi = async function(texts) {
             var zh_data = parseReceiveInfo(response);
             allGroups = allGroups.concat(zh_data);
         }
-        curGroup.push(curText);
     }
     // 之前逻辑是 一个文件翻译内容没有超过5000，才开始翻译，但是很多文件加起来不够5000，导致这里很慢
     translatePrefile.otherTime++;
@@ -212,7 +212,7 @@ var dealWithFile = async function(filePath) {
 
 var allFiles = [];
 
-var forEachFiles = function (dir){
+var forEachFiles = function (dir, oneFile){
     if(matchSuffixes[path.extname(dir)] && dir.indexOf("node_modules") === -1){
         allFiles.push(dir);
         return;
@@ -221,11 +221,18 @@ var forEachFiles = function (dir){
     for (var fileIndex in alldir) {
         let file = alldir[fileIndex];
         var pathname=path.join(dir,file);
-        if(fs.statSync(pathname).isDirectory()){
-            forEachFiles(pathname);
-        }else if(matchSuffixes[path.extname(pathname)] && pathname.indexOf("node_modules") === -1){
-            console.log("add "+ pathname);
-            allFiles.push(pathname);
+        if(oneFile) {
+            if( pathname.indexOf(oneFile)>0) {
+                allFiles.push(pathname);
+            }
+        }
+        else {
+            if(fs.statSync(pathname).isDirectory()){
+                forEachFiles(pathname);
+            }else if(matchSuffixes[path.extname(pathname)] && pathname.indexOf("node_modules") === -1){
+                console.log("add "+ pathname);
+                allFiles.push(pathname);
+            }
         }
     }
 }
@@ -256,8 +263,8 @@ var dealForEachFiles = async function (){
 
 var main = async function () {
     allFiles = [];
-    let rootPath = "d:/workplace/cc/baby-git";
-    forEachFiles(rootPath);
+    let rootPath = "d:/workplace/cc/baby-git/";
+    forEachFiles(rootPath, "init");
     await dealForEachFiles();
     //完成，MD，记一次肚子疼写代码的经历
 }
