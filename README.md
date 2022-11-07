@@ -1,2 +1,2 @@
 # AnnotationTranslate
-c++注释翻译工具
+注释翻译工具
