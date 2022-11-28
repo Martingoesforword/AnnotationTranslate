@@ -27,16 +27,38 @@ let matchSuffixes = {
     ".nas":     ["vbLike", 0],
 }
 // 不同代码族的正则和替换模式map
+
+//todo: 合并匹配表达式和替换表达式
 let suffix2Regexp = {
-    "cLike": [/\/\*(([\s\S\n])*?)\*\/|\/\/(.*)/g, m => m[1] || m[3], [[/([^\/]|^)\/\*(([\s\S\n])*?)\*\//g,"$1/*\r\n%s\r\n*/ "], [/\/\/(.*)/g, "//%s"]]
-        ,[["/\*%s\*/", "/\*\r\n%s\r\n\*/"]]],
+    "cLike": [
+        // 匹配 正则表达式
+        /(\n|^)[^"\n]*?\/\*(([\s\S\n])*?)\*\/|(\n|^)[^"\n]*?\/\/(.*)/g,
+        // 从m中获取匹配组的函数，获得真正的注释文本
+        m=> m[2] || m[5],
+        [
+            [
+                // 将 /*注释*/ 文本提前替换为/*%s*/的 正则表达式
+                /((\n|^)[^"\n]*?)\/\*(([\s\S\n])*?)\*\//g, "$1/* %s */ "
+            ],
+            [
+                // 将 //注释 文本提前替换为//%s的 正则表达式
+                /((\n|^)[^"\n]*?)\/\/(.*)/g, "$1// %s"
+            ]
+        ],
+        [
+            [
+                // 美化 正则替换表达式
+                // "/\*%s\*/", "/\*\r\n%s\r\n\*/"
+            ]
+        ]
+    ],
     "pyLike": [/#(.*)/g, m => m[1], [[/#(.*)/g, "# %s "]],[] ],
     "vbLike": [/;(.*)/g, m => m[1], [[/;(.*)/g, "; %s "]],[] ]
 }
 // 较固定配置
 var preReplacePrefix = "ANNOTATION_TRANSLATE";
 preReplacePrefix += "_TAG";
-const preReplaceMatchList = ["d","f","s","o"];
+const preReplaceMatchList = ["d","f","s","o","c","%"];
 const DEAL_ED_FLAG = "THIS_SOURCES_HAS_BEEN_TRANSLATED"
 
 /**
@@ -81,7 +103,8 @@ var translateTenApi = async function(texts, profile) {
     let curGroup = [];
     let curCharCount = 0;
 
-    for (const curText of texts) {
+    for (let curText of texts) {
+        curText = curText.trim();
         curCharCount += curText.length;
         curGroup.push(curText);
         if(curCharCount > 5000)
@@ -153,8 +176,8 @@ var dealWithFile = async function(filePath, profile) {
         console.warn("翻译结果不一致");
     }
 
-    zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\*\//g, " * / "));
-    zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\\\*/g, " \ * "));
+    zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\*\//g, " *-/ "));
+    zh_arr.forEach((desc, i)=>zh_arr[i] = desc.replace(/\\\*/g, " \-* "));
 
     // 备份已有的%s, %d, %f等为MfNlHt35wvkv43hhe-s, MfNlHt35wvkv43hhe-d, MfNlHt35wvkv43hhe-f, MfNlHt35wvkv43hhe-o
     var content = fileContent;
@@ -263,7 +286,7 @@ var main = async function () {
         otherTime: 0,
     }
 
-    let rootPath = "d:/workplace/cc/baby-git/";
+    let rootPath = "D:\\workplace\\c\\quickjs_vs2013";
 
     var allFiles = [];
     forEachFiles(allFiles, rootPath);
