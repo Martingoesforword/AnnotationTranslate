@@ -25,6 +25,8 @@ let matchSuffixes = {
     ".java":    ["cLike", 0],
     ".py":      ["pyLike", 0],
     ".nas":     ["vbLike", 0],
+    //todo: 替换为目标
+    ".test":     ["selfLike", 0],
 }
 // 不同代码族的正则和替换模式map
 
@@ -52,9 +54,13 @@ let suffix2Regexp = {
             ]
         ]
     ],
-    "pyLike": [/#(.*)/g, m => m[1], [[/#(.*)/g, "# %s "]],[] ],
-    "vbLike": [/;(.*)/g, m => m[1], [[/;(.*)/g, "; %s "]],[] ]
+    // todo: 实现有问题，需要考虑#是否是代码AST字符而不是字符串字符，vb有同样的问题
+    // "pyLike": [/\n[^#\n]*?#([^#\n]*)/g, m => m[1], [[/\n([^#\n]*?)#([^#\n]*)/g, "\n$1=%s"]],[] ],
+    // "vbLike": [/\n[^#\n]*?=([^#\n]*)/g, m => m[1], [[/\n([^#\n]*?)=([^#\n]*)/g, "\n$1=%s"]],[] ],
+    "selfLike": [/\n[^#\n]*?=([^#\n]*)/g, m => m[1], [[/\n([^#\n]*?)=([^#\n]*)/g, "\n$1=%s"]],[] ],
 }
+const FROM_LANG = "zh"
+const TO_LANG = "en"
 // 较固定配置
 var preReplacePrefix = "ANNOTATION_TRANSLATE";
 preReplacePrefix += "_TAG";
@@ -70,9 +76,9 @@ var fireTranslate = async function(curGroup) {
     var json_data = {
         url:"",
         source: curGroup,
-        fromlang: "en",
-        tolang: "zh",
-        trans_type: "en2zh",
+        fromlang: FROM_LANG,
+        tolang: TO_LANG,
+        trans_type: FROM_LANG+"2"+TO_LANG,
         page_id: 144200,
         replaced: true,
         cached: true
@@ -286,7 +292,7 @@ var main = async function () {
         otherTime: 0,
     }
 
-    let rootPath = "D:\\workplace\\c\\quickjs_vs2013";
+    let rootPath = "D:\\workplace\\js\\AnnotationTranslate\\example";
 
     var allFiles = [];
     forEachFiles(allFiles, rootPath);
@@ -296,7 +302,7 @@ var main = async function () {
     //完成，MD，记一次肚子疼写代码的经历
 }
 
-//入口 
+//入口
 main();
 
 //test();
