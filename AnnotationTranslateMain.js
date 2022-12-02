@@ -26,7 +26,7 @@ let matchSuffixes = {
     ".py":      ["pyLike", 0],
     ".nas":     ["vbLike", 0],
     //todo: 替换为目标
-    ".test":     ["selfLike", 0],
+    ".properties":     ["selfLike", 0],
 }
 // 不同代码族的正则和替换模式map
 
