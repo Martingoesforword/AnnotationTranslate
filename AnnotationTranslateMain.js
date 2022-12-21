@@ -26,10 +26,9 @@ let matchSuffixes = {
     ".py":      ["pyLike", 0],
     ".nas":     ["vbLike", 0],
     //todo: 替换为目标
-    ".properties":     ["selfLike", 0],
+    ".pro":     ["selfLike", 0],
 }
 // 不同代码族的正则和替换模式map
-
 //todo: 合并匹配表达式和替换表达式
 let suffix2Regexp = {
     "cLike": [
@@ -86,7 +85,7 @@ var fireTranslate = async function(curGroup) {
     let response = await axios({
         url: CFG_URL,
         method: "POST",
-        timeout: 5000,
+        timeout: 10000,
         headers: { "Content-Type": "application/json" },
         data:  JSON.stringify(json_data),
     });
@@ -113,7 +112,7 @@ var translateTenApi = async function(texts, profile) {
         curText = curText.trim();
         curCharCount += curText.length;
         curGroup.push(curText);
-        if(curCharCount > 5000)
+        if(curCharCount > 1900)
         {
             let zh_data = await fireTranslate(curGroup);
             allGroups = allGroups.concat(zh_data);
